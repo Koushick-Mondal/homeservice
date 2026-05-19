@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProServe - Elevate Your Living Standard</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#0B1B3D',
+                        secondary: '#2BB673',
+                        dark: '#050B14',
+                        light: '#F4F6F8'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- GSAP & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F4F6F8;
+            color: #0B1B3D;
+            overflow-x: hidden;
+        }
+
+        /* Hide default cursor on desktop for custom cursor */
+        @media (min-width: 768px) {
+            body { cursor: none; }
+            a, button, input, select, textarea { cursor: none; }
+        }
+
+        ::selection {
+            background-color: #2BB673;
+            color: white;
+        }
+
+        /* Global Noise Overlay */
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            pointer-events: none;
+            opacity: 0.03;
+            mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* 3D Tilt Card Base */
+        .tilt-card {
+            transform-style: preserve-3d;
+            transform: perspective(1000px);
+        }
+        
+        .tilt-glare {
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+            opacity: 0.5;
+            background: radial-gradient(circle at var(--glare-x, 50%) var(--glare-y, 50%), rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%);
+        }
+
+        /* Floating Inputs */
+        .floating-input {
+            position: relative;
+            padding-top: 1.5rem;
+        }
+        .floating-input label {
+            position: absolute;
+            left: 0;
+            transition: all 0.3s ease;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            pointer-events: none;
+        }
+        .floating-input input:focus ~ label,
+        .floating-input input:not(:placeholder-shown) ~ label,
+        .floating-input textarea:focus ~ label,
+        .floating-input textarea:not(:placeholder-shown) ~ label {
+            top: 0;
+            font-size: 10px;
+            color: #2BB673;
+        }
+        .floating-input input:placeholder-shown:not(:focus) ~ label,
+        .floating-input textarea:placeholder-shown:not(:focus) ~ label {
+            top: 2rem;
+            font-size: 0.75rem;
+            color: rgba(11, 27, 61, 0.5);
+        }
+
+        /* Hide Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #050B14; }
+        ::-webkit-scrollbar-thumb { background: #2BB673; border-radius: 4px; }
+
+        .text-clip-mask {
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Global Elements -->
+    <div class="noise-overlay"></div>
+    
+    <!-- Top Scroll Progress -->
+    <div id="scroll-progress" class="fixed top-0 left-0 right-0 h-1 bg-secondary origin-left z-[300] scale-x-0"></div>
+
+    <!-- Custom Cursor -->
+    <div id="cursor-dot" class="fixed top-0 left-0 w-4 h-4 bg-secondary rounded-full pointer-events-none z-[9999] mix-blend-difference hidden md:block -translate-x-1/2 -translate-y-1/2"></div>
+    <div id="cursor-outline" class="fixed top-0 left-0 w-10 h-10 border border-secondary/50 rounded-full pointer-events-none z-[9998] hidden md:block -translate-x-1/2 -translate-y-1/2 transition-transform duration-300 ease-out"></div>
+
+    <!-- Navbar -->
+    <div class="fixed top-0 left-0 w-full z-[100] flex justify-center px-4 pt-6 transition-all duration-500 pointer-events-none">
+        <nav id="navbar" class="w-full max-w-7xl rounded-full transition-all duration-700 pointer-events-auto bg-transparent py-4 px-2">
+            <div class="flex justify-between items-center">
+                <div class="magnetic flex items-center gap-3 cursor-pointer group">
+                    <div id="nav-logo-bg" class="w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-500 bg-secondary text-white group-hover:scale-105">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                    </div>
+                    <span id="nav-logo-text" class="text-2xl font-black tracking-tight transition-colors duration-500 text-white">ProServe.</span>
+                </div>
+                
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#services" class="magnetic nav-link text-sm font-bold tracking-wide uppercase transition-all duration-300 relative group py-2 text-white/80 hover:text-white">
+                        Services
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full bg-white"></span>
+                    </a>
+                    <a href="#about" class="magnetic nav-link text-sm font-bold tracking-wide uppercase transition-all duration-300 relative group py-2 text-white/80 hover:text-white">
+                        About
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full bg-white"></span>
+                    </a>
+                    <a href="#contact" class="magnetic nav-link text-sm font-bold tracking-wide uppercase transition-all duration-300 relative group py-2 text-white/80 hover:text-white">
+                        Contact
+                        <span class="nav-link-underline absolute bottom-0 left-0 w-0 h-0.5 transition-all duration-300 group-hover:w-full bg-white"></span>
+                    </a>
+                    
+                    <button id="nav-cta" class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white hover:text-primary py-3 px-8 text-sm">
+                        <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                        <span class="relative flex items-center justify-center gap-2">Get Quote</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Hero Section -->
+    <section id="home" class="relative min-h-[100svh] flex items-center pt-24 pb-32 overflow-hidden bg-dark">
+        <!-- Parallax Background -->
+        <div class="absolute inset-0 z-0">
+            <div class="absolute inset-0 bg-gradient-to-b from-primary/80 via-primary/60 to-dark z-10"></div>
+            <img id="hero-bg" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" alt="Luxury Home" class="w-full h-full object-cover opacity-60 scale-105" />
+        </div>
+
+        <!-- Mouse Glow -->
+        <div id="hero-glow" class="absolute top-0 left-0 w-[400px] h-[400px] bg-secondary rounded-full blur-[150px] opacity-20 mix-blend-screen pointer-events-none z-10 -translate-x-1/2 -translate-y-1/2"></div>
+
+        <div class="container mx-auto px-4 md:px-8 max-w-7xl relative z-20">
+            <div class="grid lg:grid-cols-12 gap-12 items-center">
+                <!-- Left Content -->
+                <div class="lg:col-span-7 pt-10 hero-content">
+                    <div class="inline-flex items-center gap-2 py-2 px-4 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-white font-bold tracking-widest text-xs mb-8 reveal-item">
+                        <span class="w-2 h-2 rounded-full bg-secondary animate-ping"></span> AVAILABLE 24/7 FOR EMERGENCIES
+                    </div>
+                    
+                    <h1 class="text-6xl md:text-7xl lg:text-[5.5rem] font-black text-white leading-[1.05] mb-8 tracking-tighter">
+                        <div class="overflow-hidden text-clip-mask"><div class="reveal-text">Elevate Your</div></div>
+                        <div class="overflow-hidden text-clip-mask">
+                            <div class="reveal-text">
+                                Living <span class="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-[#45d88f]">Standard.</span>
+                            </div>
+                        </div>
+                    </h1>
+                    
+                    <p class="text-xl md:text-2xl text-white/70 mb-10 leading-relaxed font-medium max-w-xl reveal-item">
+                        Masterful cleaning, precise repairs, and seamless moving. The premium care your home deserves.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 reveal-item">
+                        <button class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-secondary text-white shadow-[0_10px_30px_rgba(43,182,115,0.3)] hover:shadow-[0_20px_40px_rgba(43,182,115,0.5)] w-full sm:w-auto h-16 px-10 text-lg">
+                            <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                            <span class="relative flex items-center justify-center gap-2">Explore Services <i data-lucide="arrow-right" class="w-5 h-5 ml-2 group-hover:translate-x-2 transition-transform"></i></span>
+                        </button>
+                        
+                        <button class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-white/10 backdrop-blur-lg border border-white/20 text-white hover:bg-white hover:text-primary w-full sm:w-auto h-16 px-10 text-lg">
+                            <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                            <span class="relative flex items-center justify-center gap-2"><i data-lucide="play" class="w-5 h-5 mr-3 text-secondary group-hover:text-primary"></i> Watch Film</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Widget -->
+                <div class="lg:col-span-5 relative hidden lg:block z-30" id="widget-container">
+                    <div class="bg-white/5 backdrop-blur-3xl border border-white/20 p-8 rounded-[2rem] shadow-[0_40px_80px_rgba(0,0,0,0.5)] relative">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-secondary/40 to-transparent rounded-bl-full blur-2xl pointer-events-none"></div>
+                        
+                        <div class="flex items-center justify-between mb-8">
+                            <h3 class="text-2xl font-bold text-white">Instant Estimate</h3>
+                            <span id="ready-badge" class="hidden items-center gap-1 text-xs font-bold text-secondary bg-secondary/10 px-3 py-1.5 rounded-full border border-secondary/20 shadow-[0_0_15px_rgba(43,182,115,0.3)] scale-0 transition-transform duration-300">
+                                <i data-lucide="check" class="w-3 h-3"></i> READY
+                            </span>
+                        </div>
+                        
+                        <div class="space-y-5 relative z-10">
+                            <!-- Service Dropdown -->
+                            <div class="relative" id="dropdown-service">
+                                <div class="dropdown-trigger border rounded-xl p-4 cursor-pointer transition-all duration-300 flex items-center justify-between group bg-white/5 border-white/10 hover:bg-white/10" onclick="toggleDropdown('service')">
+                                    <div class="flex-1">
+                                        <p class="text-[10px] text-white/50 uppercase tracking-widest font-bold mb-1 flex items-center gap-2">
+                                            <span class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px] text-white">1</span> Service Type
+                                        </p>
+                                        <div id="service-display" class="text-white/40 font-medium">Select a service...</div>
+                                    </div>
+                                    <i data-lucide="chevron-down" class="dropdown-icon w-5 h-5 text-white/50 transition-transform duration-300"></i>
+                                </div>
+                                <div class="dropdown-menu absolute top-full left-0 w-full mt-2 bg-primary/95 backdrop-blur-3xl border border-white/20 rounded-xl shadow-2xl overflow-hidden z-50 origin-top opacity-0 invisible scale-y-95 transition-all duration-200">
+                                    <div class="p-4 hover:bg-white/10 cursor-pointer flex items-center gap-4 transition-colors border-b border-white/5 group" onclick="selectOption('service', 'clean', 'Immaculate Cleaning', 'sparkles')">
+                                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-secondary group-hover:scale-110 group-hover:bg-secondary group-hover:text-white transition-all duration-300">
+                                            <i data-lucide="sparkles" class="w-5 h-5"></i>
+                                        </div>
+                                        <div><p class="text-white font-bold text-sm">Immaculate Cleaning</p><p class="text-white/40 text-xs">Deep cleaning & sanitization</p></div>
+                                    </div>
+                                    <div class="p-4 hover:bg-white/10 cursor-pointer flex items-center gap-4 transition-colors border-b border-white/5 group" onclick="selectOption('service', 'repair', 'Precision Repairs', 'wrench')">
+                                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-secondary group-hover:scale-110 group-hover:bg-secondary group-hover:text-white transition-all duration-300">
+                                            <i data-lucide="wrench" class="w-5 h-5"></i>
+                                        </div>
+                                        <div><p class="text-white font-bold text-sm">Precision Repairs</p><p class="text-white/40 text-xs">Plumbing, electrical & fixes</p></div>
+                                    </div>
+                                    <div class="p-4 hover:bg-white/10 cursor-pointer flex items-center gap-4 transition-colors group" onclick="selectOption('service', 'move', 'White-Glove Moving', 'truck')">
+                                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-secondary group-hover:scale-110 group-hover:bg-secondary group-hover:text-white transition-all duration-300">
+                                            <i data-lucide="truck" class="w-5 h-5"></i>
+                                        </div>
+                                        <div><p class="text-white font-bold text-sm">White-Glove Moving</p><p class="text-white/40 text-xs">Packing & safe transport</p></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Size Dropdown -->
+                            <div class="relative" id="dropdown-size">
+                                <div class="dropdown-trigger border rounded-xl p-4 cursor-pointer transition-all duration-300 flex items-center justify-between group bg-white/5 border-white/10 hover:bg-white/10" onclick="toggleDropdown('size')">
+                                    <div class="flex-1">
+                                        <p class="text-[10px] text-white/50 uppercase tracking-widest font-bold mb-1 flex items-center gap-2">
+                                            <span class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px] text-white">2</span> Property Size
+                                        </p>
+                                        <div id="size-display" class="text-white/40 font-medium">E.g., 3 Bedroom House</div>
+                                    </div>
+                                    <i data-lucide="chevron-down" class="dropdown-icon w-5 h-5 text-white/50 transition-transform duration-300"></i>
+                                </div>
+                                <div class="dropdown-menu absolute top-full left-0 w-full mt-2 bg-primary/95 backdrop-blur-3xl border border-white/20 rounded-xl shadow-2xl overflow-hidden z-40 origin-top opacity-0 invisible scale-y-95 transition-all duration-200">
+                                    <div class="p-4 hover:bg-white/10 cursor-pointer flex items-center gap-4 transition-colors border-b border-white/5 group" onclick="selectOption('size', 'small', '1-2 Bedrooms', 'home')">
+                                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-secondary group-hover:scale-110 group-hover:bg-secondary group-hover:text-white transition-all duration-300">
+                                            <i data-lucide="home" class="w-5 h-5"></i>
+                                        </div>
+                                        <div><p class="text-white font-bold text-sm">1-2 Bedrooms</p><p class="text-white/40 text-xs">800 - 1,500 sq ft</p></div>
+                                    </div>
+                                    <div class="p-4 hover:bg-white/10 cursor-pointer flex items-center gap-4 transition-colors border-b border-white/5 group" onclick="selectOption('size', 'medium', '3-4 Bedrooms', 'home')">
+                                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-secondary group-hover:scale-110 group-hover:bg-secondary group-hover:text-white transition-all duration-300">
+                                            <i data-lucide="home" class="w-5 h-5"></i>
+                                        </div>
+                                        <div><p class="text-white font-bold text-sm">3-4 Bedrooms</p><p class="text-white/40 text-xs">1,500 - 3,000 sq ft</p></div>
+                                    </div>
+                                    <div class="p-4 hover:bg-white/10 cursor-pointer flex items-center gap-4 transition-colors group" onclick="selectOption('size', 'large', '5+ Bedroom Estate', 'building')">
+                                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-secondary group-hover:scale-110 group-hover:bg-secondary group-hover:text-white transition-all duration-300">
+                                            <i data-lucide="building" class="w-5 h-5"></i>
+                                        </div>
+                                        <div><p class="text-white font-bold text-sm">5+ Bedroom Estate</p><p class="text-white/40 text-xs">3,000+ sq ft</p></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Zip Code -->
+                            <div id="zip-container" class="bg-white/5 border border-white/10 rounded-xl p-4 focus-within:bg-white/10 focus-within:border-secondary focus-within:shadow-[0_0_20px_rgba(43,182,115,0.2)] transition-all duration-300 group">
+                                <p class="text-[10px] text-white/50 uppercase tracking-widest font-bold mb-1 flex items-center gap-2">
+                                    <span class="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[8px] text-white">3</span> Zip Code
+                                </p>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2 flex-1">
+                                        <i data-lucide="map-pin" id="zip-icon" class="w-4 h-4 text-white/50"></i>
+                                        <input type="text" id="zip-input" placeholder="Enter Location" class="bg-transparent border-none outline-none text-white font-medium placeholder-white/40 w-full" maxlength="10" oninput="checkFormCompletion()">
+                                    </div>
+                                    <button class="magnetic text-secondary hover:text-white hover:bg-secondary w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                                        <i data-lucide="target" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button id="submit-widget" class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-secondary text-white shadow-[0_10px_30px_rgba(43,182,115,0.3)] hover:shadow-[0_20px_40px_rgba(43,182,115,0.5)] w-full mt-6 h-14">
+                                <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                                <span class="relative flex items-center justify-center gap-2" id="submit-widget-text">Start My Estimate</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scroll indicator -->
+        <div id="scroll-indicator" class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-50 z-20">
+            <span class="text-[10px] uppercase tracking-[0.2em] text-white font-bold">Scroll</span>
+            <div class="w-px h-12 bg-gradient-to-b from-white to-transparent"></div>
+        </div>
+    </section>
+
+    <!-- Services -->
+    <section id="services" class="py-32 bg-light relative">
+        <div class="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+                <div class="max-w-2xl">
+                    <span class="text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">Excellence Delivered</span>
+                    <div class="overflow-hidden text-clip-mask"><h2 class="section-title text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-primary mb-6">Premium Solutions.</h2></div>
+                </div>
+                <button class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-primary text-white shadow-[0_10px_30px_rgba(11,27,61,0.3)] hover:shadow-[0_20px_40px_rgba(11,27,61,0.5)] px-8 py-4 hidden md:inline-flex shrink-0">
+                    <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                    <span class="relative flex items-center justify-center gap-2">View All Services</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
+                
+                <div class="tilt-card md:col-span-2 md:row-span-2 group cursor-pointer shadow-[0_20px_40px_rgba(0,0,0,0.08)] bg-primary relative rounded-[2rem] overflow-hidden">
+                    <div class="tilt-glare"></div>
+                    <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Deep Cleaning" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-80" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent opacity-90 transition-opacity duration-500"></div>
+                    <div class="absolute inset-0 p-10 flex flex-col justify-end transform" style="transform: translateZ(50px);">
+                        <div class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 shadow-lg border border-white/20 transform group-hover:-translate-y-2 transition-transform duration-500">
+                            <i data-lucide="home" class="w-8 h-8 text-white"></i>
+                        </div>
+                        <h3 class="text-4xl font-black text-white mb-3">Immaculate Cleaning</h3>
+                        <p class="text-white/80 text-lg max-w-md mb-6">Museum-grade detailing for every corner of your estate using eco-conscious, high-end products.</p>
+                        <div class="flex items-center text-secondary font-bold uppercase tracking-widest text-sm">
+                            Book Now <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tilt-card bg-white p-8 shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col justify-between group hover:bg-primary transition-colors duration-500 border border-gray-100 relative rounded-[2rem] overflow-hidden">
+                    <div class="tilt-glare"></div>
+                    <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-white/10 group-hover:text-white transition-colors duration-500" style="transform: translateZ(30px);">
+                        <i data-lucide="wrench" class="w-7 h-7"></i>
+                    </div>
+                    <div style="transform: translateZ(20px);">
+                        <h3 class="text-2xl font-bold text-primary mb-2 group-hover:text-white transition-colors">Precision Repairs</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed group-hover:text-white/60 transition-colors">Expert diagnostics and fixes for plumbing, electrical, and structural wear.</p>
+                    </div>
+                </div>
+
+                <div class="tilt-card bg-white p-8 shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col justify-between group hover:bg-secondary transition-colors duration-500 border border-gray-100 relative rounded-[2rem] overflow-hidden">
+                    <div class="tilt-glare"></div>
+                    <div class="w-14 h-14 bg-green-50 text-secondary rounded-xl flex items-center justify-center group-hover:bg-white/20 group-hover:text-white transition-colors duration-500" style="transform: translateZ(30px);">
+                        <i data-lucide="truck" class="w-7 h-7"></i>
+                    </div>
+                    <div style="transform: translateZ(20px);">
+                        <h3 class="text-2xl font-bold text-primary mb-2 group-hover:text-white transition-colors">White-Glove Moving</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed group-hover:text-white/80 transition-colors">Stress-free relocation with meticulous packing and secure transport.</p>
+                    </div>
+                </div>
+
+                <div class="tilt-card md:col-span-3 bg-primary p-10 shadow-xl overflow-hidden relative group flex flex-col md:flex-row items-center justify-between border border-[#ffffff10] rounded-[2rem]">
+                    <div class="tilt-glare"></div>
+                    <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#2BB673 1px, transparent 1px); background-size: 24px 24px;"></div>
+                    <div class="absolute right-0 top-0 w-96 h-96 bg-secondary rounded-full blur-[120px] opacity-20 group-hover:opacity-40 transition-opacity duration-1000"></div>
+                    
+                    <div class="flex items-center gap-6 relative z-10 mb-6 md:mb-0" style="transform: translateZ(40px);">
+                        <div class="w-20 h-20 bg-white/5 backdrop-blur-md rounded-full flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform duration-500">
+                            <i data-lucide="zap" class="w-10 h-10 text-secondary"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-black text-white mb-2">Annual Maintenance Plans</h3>
+                            <p class="text-white/60">Set it and forget it. Year-round comprehensive property care.</p>
+                        </div>
+                    </div>
+                    <button class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-secondary text-white shadow-[0_10px_30px_rgba(43,182,115,0.3)] hover:shadow-[0_20px_40px_rgba(43,182,115,0.5)] px-8 py-4 z-10 shrink-0" style="transform: translateZ(50px);">
+                        <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                        <span class="relative flex items-center justify-center gap-2">View Packages</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="py-32 bg-white relative overflow-hidden">
+        <div class="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div class="grid lg:grid-cols-2 gap-20 items-center">
+                
+                <div class="about-content">
+                    <span class="about-item text-secondary font-bold tracking-widest uppercase text-sm mb-4 block">The ProServe Difference</span>
+                    <div class="overflow-hidden text-clip-mask"><h2 class="about-item text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-primary mb-6">Craftsmen of Comfort.</h2></div>
+                    <p class="about-item text-xl text-[#666666] mb-12 leading-relaxed">
+                        We don't just fix houses; we restore peace of mind. For over 15 years, our elite team of vetted specialists has set the gold standard for residential and commercial services.
+                    </p>
+                    
+                    <div class="space-y-8 mb-12">
+                        <div class="about-item flex gap-6 group">
+                            <div class="w-14 h-14 rounded-2xl bg-light flex items-center justify-center shrink-0 group-hover:bg-secondary group-hover:rotate-6 transition-all duration-300">
+                                <i data-lucide="shield" class="w-7 h-7 text-primary group-hover:text-white transition-colors duration-300"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold text-primary mb-1 group-hover:text-secondary transition-colors">Vetted & Certified Experts</h4>
+                                <p class="text-[#666666] leading-relaxed">Top 1% of industry professionals, strictly background checked.</p>
+                            </div>
+                        </div>
+                        <div class="about-item flex gap-6 group">
+                            <div class="w-14 h-14 rounded-2xl bg-light flex items-center justify-center shrink-0 group-hover:bg-secondary group-hover:rotate-6 transition-all duration-300">
+                                <i data-lucide="award" class="w-7 h-7 text-primary group-hover:text-white transition-colors duration-300"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold text-primary mb-1 group-hover:text-secondary transition-colors">Transparent, Upfront Pricing</h4>
+                                <p class="text-[#666666] leading-relaxed">No hidden fees. You approve the price before we start.</p>
+                            </div>
+                        </div>
+                        <div class="about-item flex gap-6 group">
+                            <div class="w-14 h-14 rounded-2xl bg-light flex items-center justify-center shrink-0 group-hover:bg-secondary group-hover:rotate-6 transition-all duration-300">
+                                <i data-lucide="check-circle-2" class="w-7 h-7 text-primary group-hover:text-white transition-colors duration-300"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold text-primary mb-1 group-hover:text-secondary transition-colors">Ironclad Satisfaction Guarantee</h4>
+                                <p class="text-[#666666] leading-relaxed">We aren't finished until you are completely thrilled.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="about-item">
+                        <button class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-primary text-white shadow-[0_10px_30px_rgba(11,27,61,0.3)] hover:shadow-[0_20px_40px_rgba(11,27,61,0.5)] px-8 py-4">
+                            <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                            <span class="relative flex items-center justify-center gap-2">Read Our Story</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative h-[700px] hidden lg:block" style="perspective: 1000px;">
+                    <div id="about-img-1" class="absolute top-0 right-0 w-[80%] h-[500px] rounded-[2rem] overflow-hidden shadow-2xl">
+                        <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Cleaning" class="w-full h-full object-cover hover:scale-105 transition-transform duration-1000" />
+                        <div class="absolute inset-0 border-2 border-white/20 rounded-[2rem] pointer-events-none mix-blend-overlay"></div>
+                    </div>
+                    
+                    <div id="about-img-2" class="absolute bottom-10 left-0 w-[65%] h-[400px] rounded-[2rem] overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,0.4)] border-8 border-white">
+                        <img src="https://images.unsplash.com/photo-1621905252507-b35492cc74b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Team" class="w-full h-full object-cover hover:scale-105 transition-transform duration-1000" />
+                    </div>
+
+                    <div id="about-badge" class="absolute top-[40%] -left-10 bg-white/90 backdrop-blur-xl p-8 rounded-[2rem] shadow-2xl border border-white max-w-[240px]">
+                        <div class="text-6xl font-black text-secondary mb-2 tracking-tighter">15<span class="text-primary">+</span></div>
+                        <p class="font-bold text-primary uppercase tracking-widest text-sm leading-tight">Years of<br/>Excellence</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="py-32 bg-light relative">
+        <div class="container mx-auto px-4 md:px-8 max-w-7xl">
+            <div id="contact-card" class="bg-white rounded-[3rem] shadow-[0_20px_60px_rgb(0,0,0,0.05)] overflow-hidden flex flex-col lg:flex-row">
+                <div class="lg:w-2/5 bg-primary p-16 relative overflow-hidden flex flex-col justify-between">
+                    <div class="absolute top-0 right-0 w-96 h-96 bg-secondary rounded-full blur-[120px] opacity-20 pointer-events-none transform translate-x-1/3 -translate-y-1/3"></div>
+                    <div class="relative z-10">
+                        <h3 class="text-4xl font-black text-white mb-4 tracking-tight">Let's Talk.</h3>
+                        <p class="text-white/60 mb-16 text-lg">Our experts are standing by. Reach out and we'll craft a custom solution for your property.</p>
+                        
+                        <div class="space-y-10">
+                            <div class="flex items-center gap-6 group cursor-pointer">
+                                <div class="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:border-secondary group-hover:scale-110 transition-all duration-300">
+                                    <i data-lucide="phone" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white/40 uppercase tracking-widest text-xs font-bold mb-1">24/7 Hotline</p>
+                                    <p class="text-xl font-bold text-white group-hover:text-secondary transition-colors">1-800-PRO-SERV</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-6 group cursor-pointer">
+                                <div class="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:border-secondary group-hover:scale-110 transition-all duration-300">
+                                    <i data-lucide="mail" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white/40 uppercase tracking-widest text-xs font-bold mb-1">Direct Email</p>
+                                    <p class="text-xl font-bold text-white group-hover:text-secondary transition-colors">hello@proserve.com</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-6 group cursor-pointer">
+                                <div class="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-secondary group-hover:border-secondary group-hover:scale-110 transition-all duration-300">
+                                    <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white/40 uppercase tracking-widest text-xs font-bold mb-1">Headquarters</p>
+                                    <p class="text-xl font-bold text-white group-hover:text-secondary transition-colors">123 Service Ave, NY 10001</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:w-3/5 p-16 bg-white">
+                    <form class="space-y-6" onsubmit="event.preventDefault()">
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div class="floating-input">
+                                <input type="text" id="fname" placeholder=" " class="w-full bg-transparent border-b-2 border-gray-200 py-2 text-lg font-medium text-primary focus:border-secondary focus:outline-none transition-colors" />
+                                <label for="fname">Full Name</label>
+                            </div>
+                            <div class="floating-input">
+                                <input type="email" id="email" placeholder=" " class="w-full bg-transparent border-b-2 border-gray-200 py-2 text-lg font-medium text-primary focus:border-secondary focus:outline-none transition-colors" />
+                                <label for="email">Email Address</label>
+                            </div>
+                        </div>
+                        <div class="relative pt-6">
+                            <label class="absolute left-0 top-0 text-[10px] text-primary/50 font-bold uppercase tracking-widest pointer-events-none">Service Required</label>
+                            <select class="w-full bg-transparent border-b-2 border-gray-200 py-2 text-lg font-medium text-primary focus:border-secondary focus:outline-none transition-colors appearance-none cursor-pointer mt-2">
+                                <option value="" disabled selected>Select a category...</option>
+                                <option value="cleaning">Premium Cleaning</option>
+                                <option value="moving">Relocation Services</option>
+                                <option value="repairs">Maintenance & Repairs</option>
+                            </select>
+                            <i data-lucide="chevron-down" class="absolute right-0 bottom-4 w-5 h-5 text-gray-400 pointer-events-none"></i>
+                        </div>
+                        <div class="floating-input">
+                            <textarea id="details" rows="3" placeholder=" " class="w-full bg-transparent border-b-2 border-gray-200 py-2 text-lg font-medium text-primary focus:border-secondary focus:outline-none transition-colors resize-none"></textarea>
+                            <label for="details">Project Details</label>
+                        </div>
+                        <button type="submit" class="magnetic inline-flex items-center justify-center font-bold rounded-full transition-all duration-500 overflow-hidden relative group bg-secondary text-white shadow-[0_10px_30px_rgba(43,182,115,0.3)] hover:shadow-[0_20px_40px_rgba(43,182,115,0.5)] w-full py-5 text-lg mt-8">
+                            <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out"></span>
+                            <span class="relative flex items-center justify-center gap-2">Submit Request</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white pt-24 pb-8 border-t border-white/10 relative overflow-hidden">
+        <div class="container mx-auto px-4 md:px-8 max-w-7xl relative z-10">
+            <div class="grid md:grid-cols-4 gap-12 mb-20">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-3 mb-6 cursor-pointer inline-flex group magnetic">
+                        <div class="w-10 h-10 bg-secondary rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <span class="text-2xl font-black tracking-tight text-white">ProServe.</span>
+                    </div>
+                    <p class="text-white/50 max-w-sm text-lg leading-relaxed font-medium">
+                        Elevating the standard of home services through uncompromising quality, precision, and dedication.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-6 uppercase tracking-widest text-white/80">Navigation</h4>
+                    <ul class="space-y-4 text-white/50 font-medium">
+                        <li><a href="#" class="hover:text-secondary transition-colors">Services</a></li>
+                        <li><a href="#" class="hover:text-secondary transition-colors">About Us</a></li>
+                        <li><a href="#" class="hover:text-secondary transition-colors">Case Studies</a></li>
+                        <li><a href="#" class="hover:text-secondary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-lg mb-6 uppercase tracking-widest text-white/80">Legal</h4>
+                    <ul class="space-y-4 text-white/50 font-medium">
+                        <li><a href="#" class="hover:text-secondary transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="hover:text-secondary transition-colors">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="w-full overflow-hidden flex justify-center mb-12 opacity-5 select-none pointer-events-none">
+                <h2 id="footer-brand" class="text-[18vw] leading-none font-black tracking-tighter text-white">PROSERVE</h2>
+            </div>
+
+            <div class="text-center pt-8 border-t border-white/10 text-sm font-bold tracking-widest uppercase text-white/30">
+                <p>© <span id="year"></span> ProServe Incorporated. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // Register GSAP ScrollTrigger
+        gsap.registerPlugin(ScrollTrigger);
+
+        // --- Custom Cursor ---
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorOutline = document.getElementById('cursor-outline');
+        let mouseX = 0, mouseY = 0;
+        let outlineX = 0, outlineY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorDot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
+            
+            // Hover logic
+            const target = e.target;
+            if (target.closest('button') || target.closest('a') || target.closest('.cursor-pointer') || target.closest('.magnetic')) {
+                cursorDot.style.transform = `translate(${mouseX}px, ${mouseY}px) scale(3)`;
+                cursorDot.style.opacity = '0.5';
+                cursorOutline.style.transform = `translate(${mouseX}px, ${mouseY}px) scale(1.5)`;
+            } else {
+                cursorDot.style.opacity = '1';
+                cursorOutline.style.transform = `translate(${mouseX}px, ${mouseY}px) scale(1)`;
+            }
+        });
+
+        // Smooth trailing for outline
+        function animateCursor() {
+            outlineX += (mouseX - outlineX) * 0.15;
+            outlineY += (mouseY - outlineY) * 0.15;
+            cursorOutline.style.left = `${outlineX}px`;
+            cursorOutline.style.top = `${outlineY}px`;
+            cursorOutline.style.transform = `translate(-50%, -50%) ${cursorOutline.style.transform.includes('scale(1.5)') ? 'scale(1.5)' : 'scale(1)'}`;
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        // --- Scroll Progress Bar ---
+        const progressBar = document.getElementById('scroll-progress');
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = winScroll / height;
+            progressBar.style.transform = `scaleX(${scrolled})`;
+        });
+
+        // --- Navbar Scroll Effect ---
+        const navbar = document.getElementById('navbar');
+        const navLogoBg = document.getElementById('nav-logo-bg');
+        const navLogoText = document.getElementById('nav-logo-text');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const navUnderlines = document.querySelectorAll('.nav-link-underline');
+        const navCta = document.getElementById('nav-cta');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('bg-white/70', 'backdrop-blur-3xl', 'shadow-[0_20px_40px_rgba(0,0,0,0.05)]', 'border', 'border-white/40', 'py-3', 'px-6');
+                navbar.classList.remove('bg-transparent', 'py-4', 'px-2');
+                
+                navLogoBg.classList.replace('bg-secondary', 'bg-primary');
+                navLogoText.classList.replace('text-white', 'text-primary');
+                
+                navLinks.forEach(link => link.classList.replace('text-white/80', 'text-primary/70'));
+                navLinks.forEach(link => link.classList.replace('hover:text-white', 'hover:text-secondary'));
+                navUnderlines.forEach(u => u.classList.replace('bg-white', 'bg-secondary'));
+
+                navCta.classList.replace('bg-white/10', 'bg-secondary');
+                navCta.classList.replace('backdrop-blur-lg', 'shadow-[0_10px_30px_rgba(43,182,115,0.3)]');
+                navCta.classList.replace('hover:bg-white', 'hover:shadow-[0_20px_40px_rgba(43,182,115,0.5)]');
+                navCta.classList.replace('hover:text-primary', 'text-white');
+            } else {
+                navbar.classList.remove('bg-white/70', 'backdrop-blur-3xl', 'shadow-[0_20px_40px_rgba(0,0,0,0.05)]', 'border', 'border-white/40', 'py-3', 'px-6');
+                navbar.classList.add('bg-transparent', 'py-4', 'px-2');
+                
+                navLogoBg.classList.replace('bg-primary', 'bg-secondary');
+                navLogoText.classList.replace('text-primary', 'text-white');
+
+                navLinks.forEach(link => link.classList.replace('text-primary/70', 'text-white/80'));
+                navLinks.forEach(link => link.classList.replace('hover:text-secondary', 'hover:text-white'));
+                navUnderlines.forEach(u => u.classList.replace('bg-secondary', 'bg-white'));
+
+                navCta.classList.replace('bg-secondary', 'bg-white/10');
+                navCta.classList.replace('shadow-[0_10px_30px_rgba(43,182,115,0.3)]', 'backdrop-blur-lg');
+                navCta.classList.replace('hover:shadow-[0_20px_40px_rgba(43,182,115,0.5)]', 'hover:bg-white');
+                navCta.classList.remove('text-white');
+                navCta.classList.add('hover:text-primary');
+            }
+        });
+
+        // --- Magnetic Buttons ---
+        document.querySelectorAll('.magnetic').forEach(btn => {
+            btn.addEventListener('mousemove', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const x = (e.clientX - rect.left - rect.width / 2) * 0.2;
+                const y = (e.clientY - rect.top - rect.height / 2) * 0.2;
+                gsap.to(btn, { x: x, y: y, duration: 0.3, ease: 'power2.out' });
+            });
+            btn.addEventListener('mouseleave', () => {
+                gsap.to(btn, { x: 0, y: 0, duration: 0.7, ease: 'elastic.out(1, 0.3)' });
+            });
+        });
+
+        // --- Hero Animations ---
+        // Mouse Glow Follow
+        const heroSection = document.getElementById('home');
+        const heroGlow = document.getElementById('hero-glow');
+        heroSection.addEventListener('mousemove', (e) => {
+            gsap.to(heroGlow, { x: e.clientX, y: e.clientY, duration: 1.5, ease: 'power2.out' });
+        });
+
+        // Hero Parallax BG
+        gsap.to('#hero-bg', {
+            yPercent: 20,
+            ease: 'none',
+            scrollTrigger: { trigger: '#home', start: 'top top', end: 'bottom top', scrub: true }
+        });
+
+        // Hero Text Initial Load
+        gsap.fromTo('.reveal-text', 
+            { y: '100%' }, 
+            { y: '0%', duration: 1, stagger: 0.1, ease: 'power4.out', delay: 0.2 }
+        );
+        gsap.fromTo('.reveal-item',
+            { opacity: 0, y: 30 },
+            { opacity: 1, y: 0, duration: 1, stagger: 0.1, ease: 'power3.out', delay: 0.5 }
+        );
+        gsap.fromTo('#widget-container',
+            { opacity: 0, scale: 0.9, rotationY: -15, z: -100 },
+            { opacity: 1, scale: 1, rotationY: 0, z: 0, duration: 1.5, ease: 'elastic.out(1, 0.5)', delay: 0.8 }
+        );
+
+        // Scroll Indicator Bounce
+        gsap.to('#scroll-indicator', { y: 10, repeat: -1, yoyo: true, duration: 1, ease: 'power1.inOut' });
+
+        // --- Booking Widget Logic ---
+        let state = { service: null, size: null, zip: '' };
+        let activeDropdown = null;
+
+        function toggleDropdown(id) {
+            const dropdown = document.querySelector(`#dropdown-${id} .dropdown-menu`);
+            const icon = document.querySelector(`#dropdown-${id} .dropdown-icon`);
+            const container = document.querySelector(`#dropdown-${id} .dropdown-trigger`);
+
+            if (activeDropdown && activeDropdown !== id) {
+                closeDropdown(activeDropdown);
+            }
+
+            if (dropdown.classList.contains('invisible')) {
+                // Open
+                dropdown.classList.remove('invisible', 'opacity-0', 'scale-y-95');
+                icon.style.transform = 'rotate(180deg)';
+                icon.classList.replace('text-white/50', 'text-secondary');
+                container.classList.add('bg-white/10', 'border-secondary', 'shadow-[0_0_20px_rgba(43,182,115,0.2)]');
+                container.classList.remove('bg-white/5', 'border-white/10');
+                activeDropdown = id;
+            } else {
+                closeDropdown(id);
+            }
+        }
+
+        function closeDropdown(id) {
+            const dropdown = document.querySelector(`#dropdown-${id} .dropdown-menu`);
+            const icon = document.querySelector(`#dropdown-${id} .dropdown-icon`);
+            const container = document.querySelector(`#dropdown-${id} .dropdown-trigger`);
+            
+            dropdown.classList.add('invisible', 'opacity-0', 'scale-y-95');
+            icon.style.transform = 'rotate(0deg)';
+            icon.classList.replace('text-secondary', 'text-white/50');
+            container.classList.remove('bg-white/10', 'border-secondary', 'shadow-[0_0_20px_rgba(43,182,115,0.2)]');
+            container.classList.add('bg-white/5', 'border-white/10');
+            if(activeDropdown === id) activeDropdown = null;
+        }
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if(activeDropdown && !e.target.closest(`#dropdown-${activeDropdown}`)) {
+                closeDropdown(activeDropdown);
+            }
+        });
+
+        window.selectOption = function(type, id, label, iconName) {
+            state[type] = id;
+            const display = document.getElementById(`${type}-display`);
+            display.innerHTML = `<div class="flex items-center gap-2 text-white font-medium"><i data-lucide="${iconName}" class="w-4 h-4 text-secondary"></i> ${label}</div>`;
+            lucide.createIcons(); // Re-render icon
+            closeDropdown(type);
+            checkFormCompletion();
+        };
+
+        window.checkFormCompletion = function() {
+            state.zip = document.getElementById('zip-input').value;
+            const zipIcon = document.getElementById('zip-icon');
+            
+            if(state.zip.length > 0) zipIcon.classList.replace('text-white/50', 'text-secondary');
+            else zipIcon.classList.replace('text-secondary', 'text-white/50');
+
+            const isReady = state.service && state.size && state.zip.length >= 5;
+            const badge = document.getElementById('ready-badge');
+            const btn = document.getElementById('submit-widget');
+            const btnText = document.getElementById('submit-widget-text');
+
+            if (isReady) {
+                badge.classList.remove('hidden');
+                setTimeout(() => badge.classList.replace('scale-0', 'scale-100'), 10);
+                btn.classList.add('animate-pulse', 'shadow-[0_0_30px_rgba(43,182,115,0.6)]');
+                btnText.textContent = 'Calculate Estimate';
+            } else {
+                badge.classList.replace('scale-100', 'scale-0');
+                setTimeout(() => badge.classList.add('hidden'), 300);
+                btn.classList.remove('animate-pulse', 'shadow-[0_0_30px_rgba(43,182,115,0.6)]');
+                btnText.textContent = 'Start My Estimate';
+            }
+        };
+
+
+        // --- 3D Tilt Cards ---
+        document.querySelectorAll('.tilt-card').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const xPct = (x / rect.width - 0.5) * 2; // -1 to 1
+                const yPct = (y / rect.height - 0.5) * 2; // -1 to 1
+                
+                gsap.to(card, {
+                    rotationY: xPct * 7,
+                    rotationX: -yPct * 7,
+                    duration: 0.5,
+                    ease: 'power2.out',
+                    transformPerspective: 1000
+                });
+
+                card.style.setProperty('--glare-x', `${(x / rect.width) * 100}%`);
+                card.style.setProperty('--glare-y', `${(y / rect.height) * 100}%`);
+            });
+
+            card.addEventListener('mouseleave', () => {
+                gsap.to(card, {
+                    rotationY: 0,
+                    rotationX: 0,
+                    duration: 0.7,
+                    ease: 'power2.out'
+                });
+                card.style.setProperty('--glare-x', `50%`);
+                card.style.setProperty('--glare-y', `50%`);
+            });
+        });
+
+        // --- Scroll Animations ---
+        // Services
+        gsap.from('.section-title', {
+            y: '100%', scrollTrigger: { trigger: '#services', start: 'top 80%' }
+        });
+        gsap.from('.tilt-card', {
+            y: 50, opacity: 0, duration: 0.8, stagger: 0.1,
+            scrollTrigger: { trigger: '#services .grid', start: 'top 80%' }
+        });
+
+        // About 
+        gsap.from('.about-item', {
+            y: 30, opacity: 0, duration: 0.8, stagger: 0.1,
+            scrollTrigger: { trigger: '#about', start: 'top 70%' }
+        });
+        
+        // About Images Parallax
+        gsap.fromTo('#about-img-1', 
+            { y: 100, rotationX: 10 },
+            { y: 0, rotationX: 0, duration: 1, ease: 'power3.out', scrollTrigger: { trigger: '#about', start: 'top 60%' }}
+        );
+        gsap.fromTo('#about-img-2', 
+            { x: -100, y: 50 },
+            { x: 0, y: 0, duration: 1, ease: 'power3.out', delay: 0.2, scrollTrigger: { trigger: '#about', start: 'top 60%' }}
+        );
+        gsap.to('#about-badge', { y: -20, rotation: 2, yoyo: true, repeat: -1, duration: 3, ease: 'sine.inOut' });
+
+        // Contact Card
+        gsap.from('#contact-card', {
+            y: 40, opacity: 0, duration: 0.8,
+            scrollTrigger: { trigger: '#contact', start: 'top 70%' }
+        });
+
+        // Footer Text
+        gsap.from('#footer-brand', {
+            y: 50, opacity: 0, duration: 1, ease: 'back.out(1.7)',
+            scrollTrigger: { trigger: 'footer', start: 'top 90%' }
+        });
+
+    </script>
+</body>
+</html>
